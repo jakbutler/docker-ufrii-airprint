@@ -1,4 +1,4 @@
-FROM aadl/docker-cups-alpine
+FROM alpine:edge
 
 MAINTAINER jakbutler
 
