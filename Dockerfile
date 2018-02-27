@@ -68,6 +68,7 @@ RUN touch /var/lib/dpkg/status
 RUN curl $DRIVER_URL | tar xz
 RUN dpkg --force-all -i linux-UFRII-drv-v350-usen*/64-bit_Driver/Debian/*common*.deb
 RUN dpkg --force-all -i linux-UFRII-drv-v350-usen*/64-bit_Driver/Debian/*ufr2*.deb
+RUN dpkg --force-all -i linux-UFRII-drv-v350-usen*/64-bit_Driver/Debian/*utility*.deb
 RUN rm -rf linux-UFRII-drv-v350-usen*
 
 #########################################
