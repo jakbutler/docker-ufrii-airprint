@@ -1,6 +1,6 @@
 # docker-ufrii-airprint
 
-Modeled after [aadl/cups-alpine](https://github.com/aadl/docker-cups-alpine/blob/master/2.2.3/start-cups.sh) with support for Cannon URFII drivers and AirPrint support added. 
+Based on  [aadl/cups](https://github.com/aadl/docker-cups) with support for Cannon UFR II (UFR2) drivers and AirPrint added. 
 
 # What is CUPS?
 
@@ -8,9 +8,7 @@ CUPS is an open source printing system that supports IPP along with other protoc
 
 # About this image
 
-This image is based off Alpine linux to keep the size small. It is further modeled after [aadl/cups-alpine](https://github.com/aadl/docker-cups-alpine/blob/master/2.2.3/start-cups.sh)  
-
-There is a custom cups-pdf package version 2.6.1 in the image from the aadl S3 repo.
+This image is built on top of [aadl/cups](https://github.com/aadl/docker-cups), which uses CUPS v2.2.1 and installs v3.5.0 of the Canon UFR II drivers. 
 
 # Running this image
 
