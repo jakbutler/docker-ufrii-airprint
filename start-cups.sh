@@ -8,4 +8,4 @@ if [ $(grep -ci $CUPS_USER_ADMIN /etc/shadow) -eq 0 ]; then
 fi
 
 /root/printer-update.sh &
-exec dbus-daemon --system && avahi-daemon -D && /usr/sbin/cupsd -f
+exec avahi-daemon -D && /usr/sbin/cupsd -f
