@@ -7,5 +7,6 @@ if [ $(grep -ci $CUPS_USER_ADMIN /etc/shadow) -eq 0 ]; then
     echo $CUPS_USER_ADMIN:$CUPS_USER_PASSWORD | chpasswd
 fi
 
+avahi-daemon -D
 /root/printer-update.sh &
-exec avahi-daemon -D && /usr/sbin/cupsd -f
+exec /usr/sbin/cupsd -f
