@@ -18,14 +18,12 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get -y install \
     autoconf \
     automake \
     curl \
-	#gcc-libs \
-    #libgcc1 \
     inotify-tools \
     libglade2-0 \
     libpango1.0-0 \
     libpng16-16 \
-    #libxml2 \
 	python-cups \
+	wget \
  && rm -rf /var/lib/apt/lists/*
 
 # TODO: Install golang and google-cloud-print
@@ -37,8 +35,7 @@ RUN sed -i 's/Listen localhost:631/Listen 0.0.0.0:631/' /etc/cups/cupsd.conf && 
 	sed -i 's/Browsing Off/Browsing On/' /etc/cups/cupsd.conf && \
     sed -i 's/<Location \/>/<Location \/>\n  Allow All/' /etc/cups/cupsd.conf && \
 	sed -i 's/<Location \/admin>/<Location \/admin>\n  Allow All\n  Require user @SYSTEM/' /etc/cups/cupsd.conf && \
-	sed -i 's/<Location \/admin\/conf>/<Location \/admin\/conf>\n  Allow All/' /etc/cups/cupsd.conf && \
-	sed -i 's/DefaultAuthType Basic/DefaultAuthType Never/' /etc/cups/cupsd.conf
+    echo "DefaultEncryption Never" >> /etc/cups/cupsd.conf
 
 
 #########################################
@@ -51,7 +48,7 @@ COPY printer-update.sh /root/printer-update.sh
 RUN chmod +x /root/printer-update.sh
 
 ## Install and configure AirPrint
-RUN curl $AIRPRINT_GENERATE_URL -o /root/airprint-generate.py
+RUN wget --no-check-certificate $AIRPRINT_GENERATE_URL -P /root/
 RUN chmod +x /root/airprint-generate.py
 
 ## Add proper mimetypes for iOS
