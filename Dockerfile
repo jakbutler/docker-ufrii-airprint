@@ -29,6 +29,8 @@ RUN apk update && \
     bash \
     autoconf \
     automake \
+    avahi \
+    dbus \
     glib \
     libglade \
     libxml2 \
