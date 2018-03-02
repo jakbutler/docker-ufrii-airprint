@@ -31,12 +31,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get -y install \
 #########################################
 ##             CUPS Config             ##
 #########################################
-RUN sed -i 's/Listen localhost:631/Listen 0.0.0.0:631/' /etc/cups/cupsd.conf && \
-	sed -i 's/Browsing Off/Browsing On/' /etc/cups/cupsd.conf && \
-    sed -i 's/<Location \/>/<Location \/>\n  Allow All/' /etc/cups/cupsd.conf && \
-	sed -i 's/<Location \/admin>/<Location \/admin>\n  Allow All\n  Require user @SYSTEM/' /etc/cups/cupsd.conf && \
-    echo "DefaultEncryption Never" >> /etc/cups/cupsd.conf
-
+COPY cups/cupsd.conf /etc/cups/cupsd.conf
 
 #########################################
 ##            Script Setup             ##
