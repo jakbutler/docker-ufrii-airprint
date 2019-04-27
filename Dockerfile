@@ -1,20 +1,48 @@
-FROM aadl/cups:latest
+FROM golang:latest as builder
+
+#########################################
+##         DEPENDENCY INSTALL          ##
+#########################################
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get -y install \
+    gcc libcups2-dev libavahi-client-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN go get github.com/google/cloud-print-connector/...
+
+FROM debian:stretch-slim
 
 MAINTAINER jakbutler
 
 #########################################
 ##        ENVIRONMENTAL CONFIG         ##
 #########################################
-ENV DRIVER_URL='http://gdlp01.c-wss.com/gds/6/0100009236/01/linux-UFRII-drv-v350-usen.tar.gz'
-ENV AIRPRINT_GENERATE_URL='https://raw.github.com/tjfontaine/airprint-generate/master/airprint-generate.py'
-# ENV CUPS_USER_ADMIN=admin
-# ENV CUPS_USER_PASSWORD=secr3t
+ENV CANON_DRIVER_URL='http://gdlp01.c-wss.com/gds/8/0100007658/08/linux-UFRII-drv-v370-uken-05.tar.gz'
+ENV AIRPRINT_GENERATE_URL='https://raw.githubusercontent.com/tjfontaine/airprint-generate/fb98c1ded7625b1b15cbbc0f9ac004a799c7c1a6/airprint-generate.py'
+ENV CUPS_USER_ADMIN=admin
+ENV CUPS_USER_PASSWORD=secr3t
+ENV TZ='America/Los_Angeles'
+#ENV CUPS_CONFIG_DIR='/config'
+#ENV AVAHI_SERVICE_DIR='/servces'
+
+ENV DEBIAN_FRONTEND noninteractive
 
 #########################################
 ##         DEPENDENCY INSTALL          ##
 #########################################
-# Base AADL image installs cups (2.2.1), cups-filters, cups-pdf, and whois
 RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get -y install \
+    locales \
+    cups \
+    cups-client \
+    cups-browsed \
+    cups-bsd \
+    cups-filters \
+    cups-pdf \
+    avahi-daemon \
+    avahi-discover \
+    avahi-utils \
+    libnss-mdns \
+    mdns-scan \
+    whois \
     autoconf \
     automake \
     curl \
@@ -22,42 +50,61 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get -y install \
     libglade2-0 \
     libpango1.0-0 \
     libpng16-16 \
+    python \
 	python-cups \
-	wget \
- && rm -rf /var/lib/apt/lists/*
+	wget && \
+	apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# TODO: Install golang and google-cloud-print
+# Remove backends that don't make sense for container
+RUN rm /usr/lib/cups/backend/parallel && \
+    rm /usr/lib/cups/backend/serial && \
+    rm /usr/lib/cups/backend/usb
 
 #########################################
 ##             CUPS Config             ##
 #########################################
 COPY cups/cupsd.conf /etc/cups/cupsd.conf
-
-#########################################
-##            Script Setup             ##
-#########################################
-RUN rm /root/start_cups.sh
-COPY start-cups.sh /root/start-cups.sh
-RUN chmod +x /root/start-cups.sh
-COPY printer-update.sh /root/printer-update.sh
-RUN chmod +x /root/printer-update.sh
-
-## Install and configure AirPrint
-RUN wget --no-check-certificate $AIRPRINT_GENERATE_URL -P /root/
-RUN chmod +x /root/airprint-generate.py
+COPY cups/cups-files.conf /etc/cups/cups-files.conf
 
 ## Add proper mimetypes for iOS
 COPY mime/airprint.convs /share/cups/mime/airprint.convs
 COPY mime/airprint.types /share/cups/mime/airprint.types
 
-## Install Canon URFII drivers
-# RUN touch /var/lib/dpkg/status
- #&& cp /var/lib/dpkg/available-old /var/lib/dpkg/available
-RUN curl $DRIVER_URL | tar xz
-RUN dpkg -i *-UFRII-*/64-bit_Driver/Debian/*common*.deb
-RUN dpkg -i *-UFRII-*/64-bit_Driver/Debian/*ufr2*.deb
-RUN dpkg -i *-UFRII-*/64-bit_Driver/Debian/*utility*.deb
-RUN rm -rf *-UFRII-*
+#########################################
+##            Script Setup             ##
+#########################################
+COPY start-cups.sh /root/start-cups.sh
+RUN chmod +x /root/start-cups.sh
+
+#########################################
+##          AirPrint Setup             ##
+#########################################
+RUN mkdir -p /opt/airprint && \
+    chmod -R 777 /opt/airprint && \
+    wget --no-check-certificate $AIRPRINT_GENERATE_URL -P /opt/airprint/
+RUN chmod 755 /opt/airprint/airprint-generate.py
+COPY printer-update.sh /opt/airprint/printer-update.sh
+RUN chmod +x /opt/airprint/printer-update.sh
+
+#########################################
+##      Google Cloud Print Setup       ##
+#########################################
+RUN mkdir -p /etc/cloud-print-connector && \
+    mkdir -p /opt/cloud-print-connector && \
+    chmod -R 777 /etc/cloud-print-connector && \
+    chmod -R 777 /opt/cloud-print-connector
+COPY --from=builder /go/bin/gcp* /opt/cloud-print-connector/
+RUN chmod 755 /opt/cloud-print-connector/gcp*
+
+#########################################
+##     Canon UFRII Drivers Install     ##
+#########################################
+RUN curl $CANON_DRIVER_URL | tar xz && \
+    dpkg -i *-UFRII-*/64-bit_Driver/Debian/*common*.deb && \
+    dpkg -i *-UFRII-*/64-bit_Driver/Debian/*ufr2*.deb && \
+    dpkg -i *-UFRII-*/64-bit_Driver/Debian/*utility*.deb && \
+    rm -rf *-UFRII-*
 
 #########################################
 ##         EXPORTS AND VOLUMES         ##
@@ -65,17 +112,24 @@ RUN rm -rf *-UFRII-*
 VOLUME /etc/cups/ \
        /etc/avahi/services/ \
        /var/log/cups \
-       /var/spool/cups \
-       /var/spool/cups-pdf \
-       /var/cache/cups
-# /var/run/dbus
+       /etc/cloud-print-connector
+
+#########################################
+##               PORTS                 ##
+#########################################
+# Expose SMB printer sharing
+EXPOSE 137/udp 139/tcp 445/tcp
+
+# Expose LPD printer sharing
+EXPOSE 515/tcp
+
+# Expose IPP printer sharing
+EXPOSE 631/tcp
+
+# Expose avahi advertisement
+EXPOSE 5353/udp
 
 #########################################
 ##           Startup Command           ##
 #########################################
 CMD ["/root/start-cups.sh"]
-
-#########################################
-##               PORTS                 ##
-#########################################
-EXPOSE 631

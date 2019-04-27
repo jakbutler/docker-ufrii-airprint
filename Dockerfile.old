@@ -1,0 +1,141 @@
+FROM centos:latest as builder
+
+
+#########################################
+##         DEPENDENCY INSTALL          ##
+#########################################
+## centos-release-scl is install first to enable the
+## repository for the go-toolset-7-golang installation
+RUN mkdir -p /go && chmod -R 777 /go && \
+    yum -y update && \
+    yum -y install centos-release-scl && \
+    yum -y install \
+    gcc cups-devel avahi-devel git bzr go-toolset-7-golang && \
+    yum clean all
+
+RUN export PATH=$PATH:/opt/rh/go-toolset-7/root/usr/bin && \
+    export GOPATH=/go && \
+    export BASH_ENV=/opt/rh/go-toolset-7/enable && \
+    export ENV=/opt/rh/go-toolset-7/enable && \
+    export PROMPT_COMMAND=". /opt/rh/go-toolset-7/enable" && \
+    go get github.com/google/cloud-print-connector/...
+
+FROM centos:latest
+
+MAINTAINER jakbutler
+# Set metadata
+LABEL maintainer="jakbutler"
+LABEL version="2.0.0"
+LABEL description="Creates a CentOS container serving a CUPS instance accessible through Airprint and Google Cloud Print, with additional support for Canon UFRII drivers."
+
+#########################################
+##        ENVIRONMENTAL CONFIG         ##
+#########################################
+# ENV CUPS_SERVER
+ENV DRIVER_URL='http://gdlp01.c-wss.com/gds/8/0100007658/08/linux-UFRII-drv-v370-uken-05.tar.gz'
+ENV AIRPRINT_GENERATE_URL='https://raw.github.com/tjfontaine/airprint-generate/master/airprint-generate.py'
+ENV CUPS_USER_ADMIN=lpadmin
+ENV CUPS_USER_PASSWORD=secr3t
+ENV CUPS_ENV_HOST=host.docker.internal
+
+# Set workdir
+WORKDIR /opt/cups
+
+#########################################
+##         DEPENDENCY INSTALL          ##
+#########################################
+## OpenSSL is used to autogenerate SSL certs
+RUN yum -y update && \
+    yum -y install \
+    cups \
+    cups-client \
+    cups-devel \
+    cups-filters \
+    cups-libs \
+    cups-ipptool \
+    python-cups \
+    avahi \
+    avahi-devel \
+    inotify-tools \
+    gcc \
+    wget \
+    curl \
+    expect \
+    hostname \
+    openssl && \
+# Need to install CUPS with docs, or the web page will fail with "Not Found"
+    yum -y --setopt tsflags= reinstall cups && \
+    yum clean all
+
+#########################################
+##             CUPS Config             ##
+#########################################
+COPY cups/cupsd.conf /etc/cups/cupsd.conf
+
+## Add proper mimetypes for iOS
+COPY mime/airprint.convs /share/cups/mime/airprint.convs
+COPY mime/airprint.types /share/cups/mime/airprint.types
+
+#########################################
+##            Script Setup             ##
+#########################################
+COPY start-cups.sh /root/start-cups.sh
+RUN chmod 755 /root/start-cups.sh
+COPY printer-update.sh /root/printer-update.sh
+RUN chmod 755 /root/printer-update.sh
+
+#########################################
+##          AirPrint Setup             ##
+#########################################
+RUN wget --no-check-certificate $AIRPRINT_GENERATE_URL -P /root/
+RUN chmod 755 /root/airprint-generate.py
+
+#########################################
+##      Google Cloud Print Setup       ##
+#########################################
+RUN mkdir -p /opt/cloud-print-connector && \
+    mkdir -p /opt/cloud-print-connector/config && \
+    chmod -R 777 /opt/cloud-print-connector
+COPY gcp-cups-connector.config.json.tmpl /opt/cloud-print-connector/config/
+COPY --from=builder /go/bin/gcp* /opt/cloud-print-connector/
+RUN chmod 755 /opt/cloud-print-connector/gcp*
+
+#########################################
+##     Canon UFRII Drivers Install     ##
+#########################################
+RUN curl $DRIVER_URL | tar xz
+RUN yum -y localinstall *-UFRII-*/64-bit_Driver/RPM/*common*.rpm && \
+    yum -y localinstall *-UFRII-*/64-bit_Driver/RPM/*ufr2*.rpm && \
+    yum -y localinstall *-UFRII-*/64-bit_Driver/RPM/*utility*.rpm && \
+    rm -rf *-UFRII-*
+
+#########################################
+##         EXPORTS AND VOLUMES         ##
+#########################################
+VOLUME /run \
+       /tmp \
+       /etc/cups/ \
+       /etc/avahi/services/ \
+       /var/log/cups \
+       /var/spool/cups \
+       /var/spool/cups-pdf \
+       /var/cache/cups \
+       /opt/cloud-print-connector/config
+# /var/run/dbus
+
+#########################################
+##               PORTS                 ##
+#########################################
+# Expose SMB printer sharing
+EXPOSE 137/udp 139/tcp 445/tcp
+
+# Expose IPP printer sharing
+EXPOSE 631/tcp
+
+# Expose avahi advertisement
+EXPOSE 5353/udp
+
+#########################################
+##           Startup Command           ##
+#########################################
+CMD ["/root/start-cups.sh"]
