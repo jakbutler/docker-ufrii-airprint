@@ -38,7 +38,7 @@ services:
     volumes:
       - /share/docker/cups/config:/etc/cups/:rw
       - /share/docker/cups/logs:/var/log/cups:rw
-      - cloud-print-connector.sh
+      - /share/docker/cups/cpc:/etc/cloud-print-connector:rw
     ports:
       - 137:137/udp
       - 139:139/tcp
@@ -70,7 +70,7 @@ The below tables list the supported parameters for the container, not all of whi
 | ------------- | ------------- |
 | `/etc/cups/`  | (Required) The local directory where the cups configurations are stored. This is required to preserve any custom printer configurations you may add. |
 | `/var/log/cups`  | (Optional) The local directory where the cups log files will be written.|
-| `/root/cloud-print-connector/config`  | (Required) The local directory where the Google Cloud Print Connector configuration file is stored.  |
+| `/etc/cloud-print-connector`  | (Required) The local directory where the Google Cloud Print Connector configuration file is stored.  |
 
 #### Configuring Google Cloud Print
 
@@ -114,6 +114,8 @@ On unRaid, install from the **Community Repositories** and enter the required fo
 
 ## Install on QNAP
 On a QNAP, install using the Create Container page of **ContainerStation**. Search for *ufrii* and select the image from the **Docker Hub** tab and click **Create**. Specify the desired name and set the **Command** to `/root/start-cups.sh`. Adjust CPU and Memory limits as desired, then click on **Advanced Settings >>** to specify the environment variable and volume mappings. Click **Create** when done.   
+
+**Note**: Since QNAP runs its cwn instances of CUPS and avahi, it's recommended to set the network as Bridge and assign to a different Adapter / Virtual Switch than the main one.
 
 ## Versions
 + **2018-03-02:** Initial release.
