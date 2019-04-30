@@ -66,6 +66,7 @@ RUN rm /usr/lib/cups/backend/parallel && \
 #########################################
 COPY cups/cupsd.conf /etc/cups/cupsd.conf
 COPY cups/cups-files.conf /etc/cups/cups-files.conf
+COPY cups/cups-browsed.conf /etc/cups/cups-browsed.conf
 
 ## Add proper mimetypes for iOS
 COPY mime/airprint.convs /share/cups/mime/airprint.convs
@@ -90,12 +91,22 @@ RUN chmod +x /opt/airprint/printer-update.sh
 #########################################
 ##      Google Cloud Print Setup       ##
 #########################################
-RUN mkdir -p /etc/cloud-print-connector && \
+RUN useradd -s /usr/sbin/nologin -r -M cloud-print-connector && \
+    mkdir -p /etc/cloud-print-connector && \
     mkdir -p /opt/cloud-print-connector && \
     chmod -R 777 /etc/cloud-print-connector && \
     chmod -R 777 /opt/cloud-print-connector
 COPY --from=builder /go/bin/gcp* /opt/cloud-print-connector/
-RUN chmod 755 /opt/cloud-print-connector/gcp*
+COPY cloud-print-connector.sh /etc/init.d/cloud-print-connector
+RUN chmod 755 /opt/cloud-print-connector/gcp* && \
+    chmod 755 /etc/init.d/cloud-print-connector && \
+    ln -s /etc/init.d/cloud-print-connector /etc/rc0.d/K01cloud-print-connector && \
+    ln -s /etc/init.d/cloud-print-connector /etc/rc1.d/K01cloud-print-connector && \
+    ln -s /etc/init.d/cloud-print-connector /etc/rc2.d/S01cloud-print-connector && \
+    ln -s /etc/init.d/cloud-print-connector /etc/rc3.d/S01cloud-print-connector && \
+    ln -s /etc/init.d/cloud-print-connector /etc/rc4.d/S01cloud-print-connector && \
+    ln -s /etc/init.d/cloud-print-connector /etc/rc5.d/S01cloud-print-connector && \
+    ln -s /etc/init.d/cloud-print-connector /etc/rc6.d/K01cloud-print-connector
 
 #########################################
 ##     Canon UFRII Drivers Install     ##

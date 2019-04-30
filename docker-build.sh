@@ -9,7 +9,7 @@ docker build --build-arg "VERSION=$version" --tag "$tag:$version" .
 
 # docker push "$tag:$version"
 
-if [ "$2" = "latest" ]; then
+if [[ "$2" = "latest" ]]; then
     docker tag "$tag:$version" "$tag:latest"
     # docker push "$tag:latest"
 fi

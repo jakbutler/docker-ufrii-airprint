@@ -24,13 +24,12 @@ if [[ $(grep -ci ${CUPS_USER_ADMIN} /etc/shadow) -eq 0 ]]; then
     if [[ ${?} -ne 0 ]]; then RETURN=${?}; REASON="Failed to set password ${CUPS_PASSWORD} for user root, aborting!"; exit; fi
 fi
 
-### Prepare avahi-daemon configuration ###
-sed -i 's/.*enable\-reflector=.*/enable\-reflector\=yes/' /etc/avahi/avahi-daemon.conf
-sed -i 's/.*reflect\-ipv=.*/reflect\-ipv\=yes/' /etc/avahi/avahi-daemon.conf
-
 ### Start dbus
 /etc/init.d/dbus start
 
+### Prepare avahi-daemon configuration ###
+sed -i 's/.*enable\-reflector=.*/enable\-reflector\=yes/' /etc/avahi/avahi-daemon.conf
+sed -i 's/.*reflect\-ipv=.*/reflect\-ipv\=yes/' /etc/avahi/avahi-daemon.conf
 ### Start automatic printer refresh for avahi ###
 /opt/airprint/printer-update.sh &
 
@@ -38,10 +37,11 @@ sed -i 's/.*reflect\-ipv=.*/reflect\-ipv\=yes/' /etc/avahi/avahi-daemon.conf
 /etc/init.d/avahi-daemon start
 
 ### Start the Google Cloud Print Connector ###
-if [[ -f /tmp/cloud-print-connector-monitor.sock ]]; then
-    rm /tmp/cloud-print-connector-monitor.sock
+if [[ -f /tmp/cloud-print-connector.sh-monitor.sock ]]; then
+    rm /tmp/cloud-print-connector.sh-monitor.sock
 fi
-sleep 10 && /opt/cloud-print-connector/gcp-cups-connector --config-filename /etc/cloud-print-connector/gcp-cups-connector.config.json &
+#/opt/cloud-print-connector.sh/gcp-cups-connector --config-filename /etc/cloud-print-connector.sh/gcp-cups-connector.config.json
+/etc/init.d/cloud-print-connector start
 
 cat <<EOF
 ===========================================================
@@ -54,4 +54,4 @@ Password:  ${CUPS_PASSWORD}
 EOF
 
 ### Start CUPS instance ###
-exec /usr/sbin/cupsd -f -c /etc/cups/cupsd.conf
+/usr/sbin/cupsd -f
