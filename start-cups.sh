@@ -24,6 +24,12 @@ if [[ $(grep -ci ${CUPS_USER_ADMIN} /etc/shadow) -eq 0 ]]; then
     if [[ ${?} -ne 0 ]]; then RETURN=${?}; REASON="Failed to set password ${CUPS_PASSWORD} for user root, aborting!"; exit; fi
 fi
 
+### Use the default configurations if none present
+if [[ $(find /etc/cups -type f | wc -l) -eq 0 ]]; then
+    echo "Applying default containerized CUPS configuration."
+    cp -R /usr/etc/cups/* /etc/cups/
+fi
+
 ### Start dbus
 /etc/init.d/dbus start
 
@@ -40,7 +46,6 @@ sed -i 's/.*reflect\-ipv=.*/reflect\-ipv\=yes/' /etc/avahi/avahi-daemon.conf
 if [[ -f /tmp/cloud-print-connector.sh-monitor.sock ]]; then
     rm /tmp/cloud-print-connector.sh-monitor.sock
 fi
-#/opt/cloud-print-connector.sh/gcp-cups-connector --config-filename /etc/cloud-print-connector.sh/gcp-cups-connector.config.json
 /etc/init.d/cloud-print-connector start
 
 cat <<EOF

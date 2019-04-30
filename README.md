@@ -115,7 +115,7 @@ On unRaid, install from the **Community Repositories** and enter the required fo
 ## Install on QNAP
 On a QNAP, install using the Create Container page of **ContainerStation**. Search for *ufrii* and select the image from the **Docker Hub** tab and click **Create**. Specify the desired name and set the **Command** to `/root/start-cups.sh`. Adjust CPU and Memory limits as desired, then click on **Advanced Settings >>** to specify the environment variable and volume mappings. Click **Create** when done.   
 
-**Note**: Since QNAP runs its cwn instances of CUPS and avahi, it's recommended to set the network as Bridge and assign to a different Adapter / Virtual Switch than the main one.
+**Note**: Since QNAP runs its cwn instances of CUPS and avahi, it's recommended to set the container's network as Bridge and assign to a different Adapter / Virtual Switch than the main one. This would require 
 
 ## Versions
 + **2018-03-02:** Initial release.

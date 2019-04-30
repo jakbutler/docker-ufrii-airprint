@@ -64,9 +64,12 @@ RUN rm /usr/lib/cups/backend/parallel && \
 #########################################
 ##             CUPS Config             ##
 #########################################
-COPY cups/cupsd.conf /etc/cups/cupsd.conf
-COPY cups/cups-files.conf /etc/cups/cups-files.conf
-COPY cups/cups-browsed.conf /etc/cups/cups-browsed.conf
+RUN mkdir -p /usr/etc/cups && \
+    mkdir -p /usr/etc/cups/interfaces && \
+    mkdir -p /usr/etc/cups/ppd && \
+    mkdir -p /usr/etc/cups/ssl && \
+    chmod -R 777 /usr/etc/cups
+COPY cups/* /usr/etc/cups/
 
 ## Add proper mimetypes for iOS
 COPY mime/airprint.convs /share/cups/mime/airprint.convs
